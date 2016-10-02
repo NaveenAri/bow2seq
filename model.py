@@ -24,7 +24,7 @@ class Bow2Seq(object):
         #build model
         encoder_input_embeddings = embedding_module(encoder_input, config.vocab_size, config.embedding_size, embedding_dropout)
         decoder_input_embeddings = embedding_module(decoder_input, config.vocab_size, config.embedding_size, embedding_dropout, reuse=True)
-        encoding = bow_module(encoder_input_embeddings, input_mask, config.embedding_size, dropout, word_dropout, config.bow_layers, avg=config.bow_avg)
+        encoding = bow_module(encoder_input_embeddings, input_mask, config.embedding_size, 1.0, word_dropout, config.bow_layers, avg=config.bow_avg)
         decoder_initial_state = tf.tile(encoding, (1, 2*config.rnn_layers), name='decoder_initial_state')#using MultiLayer LSTM
         logits, decoder_state = decoder_module(decoder_input_embeddings, decoder_initial_state, output_mask,
                                 config.hidden_size, config.vocab_size, config.rnn_layers,
