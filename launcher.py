@@ -33,7 +33,7 @@ values_ranges = {
     "dropout": [0.5,0.7],
     "embedding_dropout": [1.0],
     "word_dropout": [1.0],
-    "vocab_size": [0],
+    "vocab_size": [10000],
     "learning_rate": [0.001],
     "embedding_learning_rate": [0.0],
     "batch_size": [256],
