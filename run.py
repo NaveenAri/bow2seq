@@ -39,7 +39,8 @@ flags.DEFINE_integer('patience', 5, 'patience for early stopping')
 flags.DEFINE_integer('total_epochs', 32, 'max trainging epochs')
 flags.DEFINE_boolean('test_only', False, 'only test already trained model')
 flags.DEFINE_boolean('pre_trained', None, 'path to load pretrained model from')
-flags.DEFINE_integer('max_items', 0, 'max items to use for trainig. useful for debugging')
+flags.DEFINE_integer('train_size', 0, 'max items to use for trainig')
+flags.DEFINE_integer('test_size', 0, 'max items to use for dev and test')
 flags.DEFINE_integer('seed', 0, 'seed for rng')
 flags.DEFINE_string('dest_path', 'temp_expts/%s'%re.sub(r'\s+|:', '_', ctime()).lower(), 'path to save model to')
 
@@ -107,9 +108,9 @@ def run(_):
     Logger.initialize(os.path.join(config.dest_path,'log.txt'))
 
     #load data
-    train = get_split('data/%s/train.txt'%config.dataset, max_items=config.max_items)
-    dev = get_split('data/%s/dev.txt'%config.dataset, config.max_sentence_len, config.max_items)
-    test = get_split('data/%s/test.txt'%config.dataset, config.max_sentence_len, config.max_items)
+    train = get_split('data/%s/train.txt'%config.dataset, config.max_sentence_len, config.train_size)
+    dev = get_split('data/%s/dev.txt'%config.dataset, config.max_sentence_len, config.test_size)
+    test = get_split('data/%s/test.txt'%config.dataset, config.max_sentence_len, config.test_size)
     Logger.log('train(%d) dev(%d) test(%d)'%(len(train), len(dev), len(test)))
 
     #build vocab
