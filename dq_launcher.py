@@ -82,7 +82,7 @@ if __name__ == '__main__':
     max_gpus = int(docopts['--max_gpus'])
 
     while True:
-        num_jobs = len(subprocess.check_output('dq-jobs').split('\n'))-3
+        num_jobs = len(subprocess.check_output('dq-jobs').strip().split('\n'))-3
         if num_jobs < max_gpus:
             cmd = get_cmd(docopts['--expt_dir'])
             if cmd:
