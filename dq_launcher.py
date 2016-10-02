@@ -47,7 +47,6 @@ values_ranges = {
     "seed": [0],
 }
 
-sofar = set()
 def get_cmd(expt_dir):
     args = {}
     # randomly select values for experiment
@@ -59,11 +58,11 @@ def get_cmd(expt_dir):
         args = {}
         for name, range_ in values_ranges.iteritems():
             args[name] = random.choice(range_)
-        if str(args) not in sofar:
-            dest_path = '{}/bow_avg{},bow_l{},rnn_l{},hid_s{},emb_s{},lr{},emb{},maxlen{}'.format(expt_dir, args['bow_avg'], args['bow_layers'], args['rnn_layers'], args['hidden_size'], args['embedding_size'], args['learning_rate'], args['embedding'], args['max_sentence_len'])
-            if not os.path.exists(dest_path):
-                sofar.add(str(args))
-                break
+
+        dest_path = '{}/bow_avg{},bow_l{},rnn_l{},hid_s{},emb_s{},lr{},emb{},maxlen{}'.format(expt_dir, args['bow_avg'], args['bow_layers'], args['rnn_layers'], args['hidden_size'], args['embedding_size'], args['learning_rate'], args['embedding'], args['max_sentence_len'])
+        if not os.path.exists(dest_path):
+            os.makedirs(dest_path)
+            break
     args["dest_path"] = dest_path
 
     cmd = ["python", "run.py"]
@@ -87,8 +86,9 @@ if __name__ == '__main__':
             cmd = get_cmd(docopts['--expt_dir'])
             if cmd:
                 print cmd
-                # cmd = 'dq_submit %s'%cmd
-                # subprocess.call(cmd)
+                cmd = 'dq_submit %s'%cmd
+                subprocess.call(cmd)
             else:
+                print 'could not find args for expt'
                 break
         time.sleep(2)

@@ -100,8 +100,6 @@ def run(_):
     config = AttrDict(FLAGS.__flags)
     np.random.seed(config.seed)
     tf.set_random_seed(config.seed)
-    if not os.path.isdir(config.dest_path):
-        os.makedirs(config.dest_path)
     Logger.initialize(os.path.join(config.dest_path,'log.txt'))
 
     #load data
