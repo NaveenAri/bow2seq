@@ -24,7 +24,7 @@ from docopt import docopt
 values_ranges = {
     #model params
     "bow_avg": [True],
-    "bow_layers": [0,1,2],
+    "bow_layers": [0],
     "rnn_layers": [3],
     "embedding_size": [300],
     "hidden_size": [300],
@@ -39,6 +39,7 @@ values_ranges = {
     "batch_size": [124],
     "embedding": ['glove'],
     "max_sentence_len": [15],
+    "dataset": ['1bw'],
     #expt params
     "early_stop": ['loss'],
     "patience": [5],
@@ -61,7 +62,7 @@ def get_cmd(expt_dir):
         for name, range_ in values_ranges.iteritems():
             args[name] = random.choice(range_)
 
-        dest_path = '{}/bow_avg{},bow_l{},rnn_l{},hid_s{},emb_s{},lr{},emb{},maxlen{}'.format(expt_dir, args['bow_avg'], args['bow_layers'], args['rnn_layers'], args['hidden_size'], args['embedding_size'], args['learning_rate'], args['embedding'], args['max_sentence_len'])
+        dest_path = '{}/data{}bow_avg{},bow_l{},rnn_l{},hid_s{},emb_s{},lr{},emb{},maxlen{}'.format(expt_dir, args['dataset'], args['bow_avg'], args['bow_layers'], args['rnn_layers'], args['hidden_size'], args['embedding_size'], args['learning_rate'], args['embedding'], args['max_sentence_len'])
         if not os.path.exists(dest_path):
             os.makedirs(dest_path)
             break

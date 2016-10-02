@@ -17,7 +17,7 @@ flags = tf.app.flags
 FLAGS = flags.FLAGS
 
 flags.DEFINE_boolean('bow_avg', False, 'average the words bow word embeddings to get encoding')
-flags.DEFINE_integer('bow_layers', 0, 'number of feedforward layers to be applied to bow vector')
+flags.DEFINE_integer('bow_layers', 2, 'number of feedforward layers to be applied to bow vector')
 flags.DEFINE_integer('rnn_layers', 3, 'word embedding size')
 flags.DEFINE_integer('embedding_size', 300, 'word embedding size')
 flags.DEFINE_integer('hidden_size', 300, 'hidden size')
@@ -30,8 +30,9 @@ flags.DEFINE_integer('vocab_size', 10000, 'max vocab size')
 flags.DEFINE_float('learning_rate', 0.001, 'initial learning rate.')
 flags.DEFINE_float('embedding_learning_rate', 0.0, 'initial learning rate for word embeddings.')
 flags.DEFINE_integer('batch_size', 512, 'batch size')
-flags.DEFINE_string('embedding', 'glove', 'choose from ["glove", "senna", "hybrid", "random"]')
+flags.DEFINE_string('embedding', 'random', 'choose from ["glove", "senna", "hybrid", "random"]')
 flags.DEFINE_integer('max_sentence_len', 10, 'max length of sentence')
+flags.DEFINE_string('dataset', '1bw', 'choose from ["1bw", "ptb"]')
 
 flags.DEFINE_string('early_stop', 'loss', 'early stoppping criterion ["accuracy","loss"]')
 flags.DEFINE_integer('patience', 5, 'patience for early stopping')
@@ -45,17 +46,17 @@ flags.DEFINE_string('dest_path', 'temp_expts/%s'%re.sub(r'\s+|:', '_', ctime()).
 GO ='_GO'
 EOS = '_EOS'
 
-def get_split(fname, max_sentence_len=0):
+def get_split(fname, max_sentence_len=0, max_items=0):
+    lines = []
     with open(fname, 'r') as f:
-        #read and tokenize
-        lines = f.readlines()
-        lines = [line.strip().split() for line in lines]
-        
-        #TODO remove punctuation
-
-        #filter out long sentence
-        if max_sentence_len:
-            lines = [line for line in lines if len(line)<=max_sentence_len]
+        for line in f:
+            #tokenize
+            line = line.strip().split()
+            #filter out long sentence
+            if len(line)<=max_sentence_len:
+                lines.append(line)
+            if max_items and len(lines)>=max_items:
+                break
     return lines
 
 def padded(seqs, PAD_ID):
@@ -100,6 +101,8 @@ def run(_):
     config = AttrDict(FLAGS.__flags)
     np.random.seed(config.seed)
     tf.set_random_seed(config.seed)
+    if not os.path.exists(config.dest_path):
+        os.makedirs(config.dest_path)
     Logger.initialize(os.path.join(config.dest_path,'log.txt'))
 
     #load data
