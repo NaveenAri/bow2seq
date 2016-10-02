@@ -24,7 +24,7 @@ class Bow2Seq(object):
         #build model
         encoder_input_embeddings = embedding_module(encoder_input, config.vocab_size, config.embedding_size, embedding_dropout)
         decoder_input_embeddings = embedding_module(decoder_input, config.vocab_size, config.embedding_size, embedding_dropout, reuse=True)
-        encoding = bow_module(encoder_input_embeddings, input_mask, dropout, word_dropout, config.bow_layers, avg=config.bow_avg)
+        encoding = bow_module(encoder_input_embeddings, input_mask, config.embedding_size, dropout, word_dropout, config.bow_layers, avg=config.bow_avg)
         decoder_initial_state = tf.tile(encoding, (1, 2*config.rnn_layers), name='decoder_initial_state')#using MultiLayer LSTM
         logits, decoder_state = decoder_module(decoder_input_embeddings, decoder_initial_state, output_mask,
                                 config.hidden_size, config.vocab_size, config.rnn_layers,
@@ -112,8 +112,8 @@ def embedding_module(token_seq, vocab_size, emb_size, dropout, scope="Embedding"
         dropped_embeddings = tf.nn.dropout(word_embeddings, dropout)
     return dropped_embeddings
 
-def bow_module(word_embeddings, token_mask, dropout, word_dropout, layers=0, avg=False, scope="Encoder"):
-    emb_size = tf.shape(word_embeddings)[2]
+def bow_module(word_embeddings, token_mask, emb_size, dropout, word_dropout, layers=0, avg=False, scope="Encoder"):
+    #emb_size = tf.shape(word_embeddings)[2]
     with tf.variable_scope(scope):
         token_mask = tf.nn.dropout(tf.to_float(token_mask), keep_prob=word_dropout)
         seq_len = tf.reduce_sum(token_mask, reduction_indices=1)
@@ -124,8 +124,8 @@ def bow_module(word_embeddings, token_mask, dropout, word_dropout, layers=0, avg
             bow_vec = tf.truediv(bow_vec, tf.expand_dims(seq_len, 1), name='bow_avg')
         for layer_num in xrange(layers):
             with tf.variable_scope("layer_%d"%layer_num):
-                W = tf.get_variable("W", tf.squeeze([emb_size, emb_size]))
-                b = tf.get_variable("b", tf.squeeze([emb_size]))
+                W = tf.get_variable("W", [emb_size, emb_size])
+                b = tf.get_variable("b", [emb_size])
                 bow_vec = tf.nn.relu(tf.matmul(bow_vec, W) + b)
                 bow_vec = tf.nn.dropout(bow_vec, keep_prob=dropout)
                 tf.add_to_collection('l2_loss', tf.nn.l2_loss(W))

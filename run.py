@@ -32,7 +32,7 @@ flags.DEFINE_float('embedding_learning_rate', 0.0, 'initial learning rate for wo
 flags.DEFINE_integer('batch_size', 512, 'batch size')
 flags.DEFINE_string('embedding', 'random', 'choose from ["glove", "senna", "hybrid", "random"]')
 flags.DEFINE_integer('max_sentence_len', 10, 'max length of sentence')
-flags.DEFINE_string('dataset', '1bw', 'choose from ["1bw", "ptb"]')
+flags.DEFINE_string('dataset', 'ptb', 'choose from ["1bw", "ptb"]')
 
 flags.DEFINE_string('early_stop', 'loss', 'early stoppping criterion ["accuracy","loss"]')
 flags.DEFINE_integer('patience', 5, 'patience for early stopping')
@@ -52,9 +52,10 @@ def get_split(fname, max_sentence_len=0, max_items=0):
         for line in f:
             #tokenize
             line = line.strip().split()
-            #filter out long sentence
-            if len(line)<=max_sentence_len:
-                lines.append(line)
+            #skip long sentence
+            if max_sentence_len and len(line)<=max_sentence_len:
+                continue
+            lines.append(line)
             if max_items and len(lines)>=max_items:
                 break
     return lines
@@ -106,10 +107,9 @@ def run(_):
     Logger.initialize(os.path.join(config.dest_path,'log.txt'))
 
     #load data
-    train = get_split('data/train.txt')
-    dev, test = [get_split(fname, config.max_sentence_len)for fname in ['data/dev.txt', 'data/test.txt']]
-    if config.max_items:
-        train, dev, test = train[:config.max_items], dev[:config.max_items], test[:config.max_items]
+    train = get_split('data/%s/train.txt'%config.dataset, max_items=config.max_items)
+    dev = get_split('data/%s/dev.txt'%config.dataset, config.max_sentence_len, config.max_items)
+    test = get_split('data/%s/test.txt'%config.dataset, config.max_sentence_len, config.max_items)
     Logger.log('train(%d) dev(%d) test(%d)'%(len(train), len(dev), len(test)))
 
     #build vocab

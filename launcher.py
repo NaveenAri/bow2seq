@@ -24,7 +24,7 @@ from docopt import docopt
 values_ranges = {
     #model params
     "bow_avg": [True],
-    "bow_layers": [0],
+    "bow_layers": [0,1,2,3],
     "rnn_layers": [3],
     "embedding_size": [300],
     "hidden_size": [300],
@@ -35,8 +35,8 @@ values_ranges = {
     "word_dropout": [1.0],
     "vocab_size": [0],
     "learning_rate": [0.001],
-    "embedding_learning_rate": [0.0001],
-    "batch_size": [124],
+    "embedding_learning_rate": [0.0],
+    "batch_size": [256],
     "embedding": ['glove'],
     "max_sentence_len": [15],
     "dataset": ['1bw'],
