@@ -109,7 +109,7 @@ if __name__ == '__main__':
         else:
             for gpu in gpus:
                 cmd = get_cmd(docopts['--expt_dir'])
-                if cmd:
-                    print cmd
-                    cmd = 'CUDA_VISIBLE_DEVICES=%s %s'%(gpu, cmd)
-                    subprocess.Popen(cmd)
+                assert cmd is not None
+                print cmd
+                cmd = 'CUDA_VISIBLE_DEVICES=%s %s'%(gpu, cmd)
+                subprocess.Popen(cmd)
