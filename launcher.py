@@ -4,6 +4,8 @@ Usage:
     run_experiments.py
                [--expt_dir=<expt_dir>]
                [--max_gpus=<gpus>]
+               [--gpus=<gpus>]
+               [--autolaunch]
     run_experiments.py (-h | --help)
     run_experiments.py --version
 
