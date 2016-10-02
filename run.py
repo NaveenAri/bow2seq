@@ -103,7 +103,8 @@ def run(_):
     Logger.initialize(os.path.join(config.dest_path,'log.txt'))
 
     #load data
-    train, dev, test = [get_split(fname, config.max_sentence_len)for fname in ['data/train.txt', 'data/dev.txt', 'data/test.txt']]
+    train = get_split('data/train.txt')
+    dev, test = [get_split(fname, config.max_sentence_len)for fname in ['data/dev.txt', 'data/test.txt']]
     if config.max_items:
         train, dev, test = train[:config.max_items], dev[:config.max_items], test[:config.max_items]
     Logger.log('train(%d) dev(%d) test(%d)'%(len(train), len(dev), len(test)))

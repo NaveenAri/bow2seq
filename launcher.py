@@ -23,11 +23,11 @@ from docopt import docopt
 
 values_ranges = {
     #model params
-    "bow_avg": [False],
-    "bow_layers": [0],
+    "bow_avg": [True],
+    "bow_layers": [0,1,2],
     "rnn_layers": [3],
-    "embedding_size": [100],
-    "hidden_size": [100],
+    "embedding_size": [300],
+    "hidden_size": [300],
     #training params
     "l2": [0.0],
     "dropout": [0.5],
@@ -104,7 +104,7 @@ if __name__ == '__main__':
                 if cmd:
                     print cmd
                     cmd = 'CUDA_VISIBLE_DEVICES=%s %s'%(gpus[0], cmd)
-                    subprocess.call(cmd)
+                    subprocess.call(cmd, shell=True)
                 time.sleep(2)
         else:
             for gpu in gpus:
@@ -112,4 +112,4 @@ if __name__ == '__main__':
                 assert cmd is not None
                 print cmd
                 cmd = 'CUDA_VISIBLE_DEVICES=%s %s'%(gpu, cmd)
-                subprocess.Popen(cmd)
+                subprocess.Popen(cmd, shell=True)
