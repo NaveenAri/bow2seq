@@ -24,13 +24,13 @@ from docopt import docopt
 values_ranges = {
     #model params
     "bow_avg": [True],
-    "bow_layers": [0,1,2,3],
+    "bow_layers": [0,1],
     "rnn_layers": [3],
     "embedding_size": [300],
     "hidden_size": [300],
     #training params
     "l2": [0.0],
-    "dropout": [0.5],
+    "dropout": [0.5,0.7],
     "embedding_dropout": [1.0],
     "word_dropout": [1.0],
     "vocab_size": [0],
@@ -46,8 +46,8 @@ values_ranges = {
     "total_epochs": [100],
     "test_only": [False],
     "pre_trained": [None],
-    "train_size": [0],
-    "test_size": [0],
+    "train_size": [100000],
+    "test_size": [10000],
     "seed": [0],
 }
 
@@ -63,7 +63,7 @@ def get_cmd(expt_dir):
         for name, range_ in values_ranges.iteritems():
             args[name] = random.choice(range_)
 
-        dest_path = '{}/data{}_{}_{},bow_avg{},bow_l{},rnn_l{},hid_s{},emb_s{},lr{},emb{},maxlen{}'.format(expt_dir, args['dataset'], args['train_size'], args['test_size'], args['bow_avg'], args['bow_layers'], args['rnn_layers'], args['hidden_size'], args['embedding_size'], args['learning_rate'], args['embedding'], args['max_sentence_len'])
+        dest_path = '{}/data{}_{}_{},bow_avg{},bow_l{},rnn_l{},hid_s{},emb_s{},lr{},drop{},emb{},maxlen{}'.format(expt_dir, args['dataset'], args['train_size'], args['test_size'], args['bow_avg'], args['bow_layers'], args['rnn_layers'], args['hidden_size'], args['embedding_size'], args['learning_rate'], args['dropout'], args['embedding'], args['max_sentence_len'])
         if not os.path.exists(dest_path):
             os.makedirs(dest_path)
             break
