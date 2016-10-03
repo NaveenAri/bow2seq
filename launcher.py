@@ -28,10 +28,10 @@ values_ranges = {
     "rnn_layers": [3],
     "embedding_size": [300],
     "hidden_size": [300],
-    "share_embeddings": [True],
+    "share_embeddings": [False, True],
     #training params
     "l2": [0.0],
-    "dropout": [0.7, 0.9],
+    "dropout": [1.0],
     "embedding_dropout": [1.0],
     "word_dropout": [1.0],
     "vocab_size": [10000],
