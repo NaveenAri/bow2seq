@@ -54,7 +54,7 @@ def get_split(fname, max_sentence_len=0, max_items=0):
             #tokenize
             line = line.strip().split()
             #skip long sentence
-            if max_sentence_len and len(line)<=max_sentence_len:
+            if max_sentence_len and len(line)>max_sentence_len:
                 continue
             lines.append(line)
             if max_items and len(lines)>=max_items:
