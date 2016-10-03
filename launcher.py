@@ -23,7 +23,7 @@ from docopt import docopt
 
 values_ranges = {
     #model params
-    "bow_avg": [False],#False works better(evalued with 4 mil train after 2nd epoch)
+    "bow_avg": [False],#False works sightly better(evalued with 4 mil train after 10 epochs)
     "bow_layers": [2],
     "rnn_layers": [3],
     "embedding_size": [300],
@@ -65,8 +65,10 @@ def get_cmd(expt_dir):
         args = {}
         for name, range_ in values_ranges.iteritems():
             args[name] = random.choice(range_)
-
         dest_path = '{}/data{}_{}_{},bow_avg{},bow_l{},rnn_l{},hid_s{},emb_s{},lr{},drop{},emb{},share_emb{},maxlen{}'.format(expt_dir, args['dataset'], args['train_size'], args['test_size'], args['bow_avg'], args['bow_layers'], args['rnn_layers'], args['hidden_size'], args['embedding_size'], args['learning_rate'], args['dropout'], args['embedding'], args['share_embedding'], args['max_sentence_len'])
+        if args['pre_trained']:
+            dest_path+=',pre_trained{}'.format(args['pre_trained'])
+        
         if not os.path.exists(dest_path):
             os.makedirs(dest_path)
             break

@@ -41,7 +41,7 @@ flags.DEFINE_integer('patience', 5, 'patience for early stopping')
 flags.DEFINE_integer('decay_patience', 0, 'patience for decaying learning rate')
 flags.DEFINE_integer('total_epochs', 32, 'max trainging epochs')
 flags.DEFINE_boolean('test_only', False, 'only test already trained model')
-flags.DEFINE_boolean('pre_trained', None, 'path to load pretrained model from')
+flags.DEFINE_string('pre_trained', None, 'path to load pretrained model from')
 flags.DEFINE_integer('train_size', 0, 'max items to use for trainig')
 flags.DEFINE_integer('test_size', 0, 'max items to use for dev and test')
 flags.DEFINE_integer('seed', 0, 'seed for rng')
@@ -154,8 +154,9 @@ def run(_):
 
     with tf.Session() as session:
 
-        def save(scores):
-            saver.save(session, save_location)
+        def save(scores, save_model=True):
+            if save_model:
+                saver.save(session, save_location)
             with open(os.path.join(config.dest_path, 'best.json'), 'wb') as f:
                 json.dump(scores, f, indent=2)
         # You can visualize the graph structure by running `tensorboard --logdir=/%(dest_path)/%(name)s/`
@@ -175,6 +176,14 @@ def run(_):
 
         if config.pre_trained:
             saver.restore(session, config.pre_trained)
+            dev_results_old_model = calculate_metrics(session, dev, model, config, GO_ID, EOS_ID, PAD_ID)
+            bestscores = {
+                'epoch': -1,
+                'dev': dev_results_old_model
+            }
+            bar = '*' * 10
+            Logger.log('{} Pretrained Model {}'.format(bar, -1, config.total_epochs, bar))
+            Logger.log(pformat(bestscores, indent=2))
         else:
             session.run(tf.initialize_all_variables())
             for var in tf.all_variables():
@@ -248,13 +257,14 @@ def run(_):
                 Logger.log('finished in {}s'.format(time() - train_start))
 
         ###
-        Logger.log('Testing...')
-        saver.restore(session, save_location)
-        test_results = calculate_metrics(session, test, model, config, GO_ID, EOS_ID, PAD_ID)
-        bestscores['test'] = test_results
-        Logger.log(pformat(config))
-        Logger.log(pformat(bestscores))
-        save(bestscores)
+        if os.path.exists(save_location):
+            Logger.log('Testing...')
+            saver.restore(session, save_location)
+            test_results = calculate_metrics(session, test, model, config, GO_ID, EOS_ID, PAD_ID)
+            bestscores['test'] = test_results
+            Logger.log(pformat(config))
+            Logger.log(pformat(bestscores))
+            save(bestscores, save_model=False)
 
 
 if __name__ == "__main__":
