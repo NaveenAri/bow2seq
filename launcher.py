@@ -24,19 +24,19 @@ from docopt import docopt
 values_ranges = {
     #model params
     "bow_avg": [True],
-    "bow_layers": [0,1],
+    "bow_layers": [2],
     "rnn_layers": [3],
     "embedding_size": [300],
     "hidden_size": [300],
     #training params
     "l2": [0.0],
-    "dropout": [0.5,0.7],
+    "dropout": [0.7],
     "embedding_dropout": [1.0],
     "word_dropout": [1.0],
     "vocab_size": [10000],
     "learning_rate": [0.001],
     "embedding_learning_rate": [0.0],
-    "batch_size": [256],
+    "batch_size": [1024],
     "embedding": ['glove'],
     "max_sentence_len": [15],
     "dataset": ['1bw'],
@@ -46,8 +46,8 @@ values_ranges = {
     "total_epochs": [100],
     "test_only": [False],
     "pre_trained": [None],
-    "train_size": [100000],
-    "test_size": [10000],
+    "train_size": [1000000],
+    "test_size": [100000],
     "seed": [0],
 }
 
