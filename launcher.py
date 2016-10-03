@@ -66,7 +66,7 @@ def get_cmd(expt_dir):
         for name, range_ in values_ranges.iteritems():
             args[name] = random.choice(range_)
 
-        dest_path = '{}/data{}_{}_{},bow_avg{},bow_l{},rnn_l{},hid_s{},emb_s{},lr{},drop{},emb{},share_emb{},maxlen{}'.format(expt_dir, args['dataset'], args['train_size'], args['test_size'], args['bow_avg'], args['bow_layers'], args['rnn_layers'], args['hidden_size'], args['embedding_size'], args['learning_rate'], args['dropout'], args['embedding'], args['share_embeddings'], args['max_sentence_len'])
+        dest_path = '{}/data{}_{}_{},bow_avg{},bow_l{},rnn_l{},hid_s{},emb_s{},lr{},drop{},emb{},share_emb{},maxlen{}'.format(expt_dir, args['dataset'], args['train_size'], args['test_size'], args['bow_avg'], args['bow_layers'], args['rnn_layers'], args['hidden_size'], args['embedding_size'], args['learning_rate'], args['dropout'], args['embedding'], args['share_embedding'], args['max_sentence_len'])
         if not os.path.exists(dest_path):
             os.makedirs(dest_path)
             break
