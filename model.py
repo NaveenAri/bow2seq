@@ -20,15 +20,30 @@ class Bow2Seq(object):
         dropout = tf.select(train, config.dropout, 1.0, name="dropout")
         embedding_dropout = tf.select(train, config.embedding_dropout, 1.0, name="dropout_word_embeddings")
         word_dropout = tf.select(train, config.word_dropout, 1.0, name="dropout_words")
+        learning_rate =  tf.Variable(float(config.learning_rate), trainable=False, name='learning_rate')
+        embedding_learning_rate = tf.Variable(float(config.embedding_learning_rate), trainable=False, name='embedding_learning_rate')
+        learning_rate_decay_op = learning_rate.assign(learning_rate * config.learning_rate_decay_factor)
+        embedding_learning_rate_decay_op = embedding_learning_rate.assign(embedding_learning_rate * config.learning_rate_decay_factor)
 
         #build model
-        encoder_input_embeddings = embedding_module(encoder_input, config.vocab_size, config.embedding_size, embedding_dropout)
-        decoder_input_embeddings = embedding_module(decoder_input, config.vocab_size, config.embedding_size, embedding_dropout, reuse=True)
-        encoding = bow_module(encoder_input_embeddings, input_mask, config.embedding_size, 1.0, word_dropout, config.bow_layers, avg=config.bow_avg)
-        decoder_initial_state = tf.tile(encoding, (1, 2*config.rnn_layers), name='decoder_initial_state')#using MultiLayer LSTM
+        encoder_input_embeddings = embedding_module(encoder_input, config.vocab_size, config.embedding_size, embedding_dropout, trainable=False, scope="BOW_Embedding")
+
+        if config.share_embeddings:
+            decoder_input_embeddings = embedding_module(decoder_input, config.vocab_size, config.embedding_size, embedding_dropout, trainable=False, reuse=True, scope="BOW_Embedding")
+        else:
+            decoder_input_embeddings = embedding_module(decoder_input, config.vocab_size, config.embedding_size, embedding_dropout, scope="Decoder_Embedding")
+
+        bow_vec = bow_module(encoder_input_embeddings, input_mask, config.embedding_size, 1.0, word_dropout, config.bow_layers, avg=config.bow_avg)
+        #decoder_initial_state = tf.tile(bow_vec, (1, 2*config.rnn_layers), name='decoder_initial_state')#using MultiLayer LSTM
+        decoder_initial_state = tuple([rnn_cell.LSTMStateTuple(c=tf.identity(bow_vec), h=tf.identity(bow_vec)) for i in xrange(config.rnn_layers)])
         logits, decoder_state = decoder_module(decoder_input_embeddings, decoder_initial_state, output_mask,
                                 config.hidden_size, config.vocab_size, config.rnn_layers,
                                 dropout)
+        #concat c,h
+        decoder_state = [tf.concat(1, lstm_state) for lstm_state in decoder_state]
+        #concat each layers state
+        decoder_state = tf.concat(1, decoder_state)
+
         pred = tf.argmax(logits, 2)
         logprobs, loss, correct, total = sequence_logprobs_loss_correct_total(logits, decoder_target, output_mask)
 
@@ -37,25 +52,27 @@ class Bow2Seq(object):
             l2_loss_elems = tf.get_collection('l2_loss')
             l2_loss = tf.add_n(l2_loss_elems) if len(l2_loss_elems)>0 else 0.0
             total_loss = loss + config.l2*l2_loss
-            optimizer = tf.train.AdamOptimizer(config.learning_rate)
-            we_optimizer = tf.train.AdamOptimizer(config.embedding_learning_rate)
-            
+            optimizer = tf.train.AdamOptimizer(learning_rate)
             train_op = optimizer.minimize(total_loss, global_step=global_step, var_list=[var for var in tf.trainable_variables() if "Embedding" not in var.name])
-            we_train_op = we_optimizer.minimize(total_loss, var_list=[var for var in tf.trainable_variables() if "Embedding" in var.name])
-            train_op = tf.group(train_op, we_train_op)
+            if config.embedding_learning_rate and not config.share_embeddings:
+                we_optimizer = tf.train.AdamOptimizer(embedding_learning_rate)
+                we_train_op = we_optimizer.minimize(total_loss, var_list=[var for var in tf.trainable_variables() if "Embedding" in var.name])
+                train_op = tf.group(train_op, we_train_op)
             
-        #placeholders
+        #placeholders/input_feed
         self.encoder_input = encoder_input
         self.decoder_input = decoder_input
         self.decoder_target = decoder_target
         self.input_mask = input_mask
         self.output_mask = output_mask
         self.train = train
-        self.decoder_initial_state = decoder_initial_state
+        self.decoder_initial_state = decoder_initial_state#not placeholder
 
         #ops
         self.train_op = train_op
-        self.encoding = encoding
+        self.learning_rate_decay_op = learning_rate_decay_op
+        self.embedding_learning_rate_decay_op = embedding_learning_rate_decay_op
+        self.bow_vec = bow_vec
         self.logprobs = logprobs
         self.pred = pred
         self.loss = loss
@@ -86,7 +103,13 @@ class Bow2Seq(object):
             loss_batch, correct_batch, total_batch = session.run([self.loss, self.correct, self.total], feed)
         return loss_batch, correct_batch, total_batch
 
-    def decode(self, session, decoder_input, decoder_state):
+    def decode(self, session, decoder_input, decoder_state_array):
+        print 'decoder_state', decoder_state_array.shape
+        decoder_state = []
+        for lstm_state in np.split(decoder_state_array, self.config.rnn_layers, axis=1):
+            lstm_state = np.split(lstm_state, 2, axis=1)
+            decoder_state.append(rnn_cell.LSTMStateTuple(lstm_state[0], lstm_state[1]))
+        decoder_state = tuple(decoder_state)
         feed = {
             self.decoder_input: decoder_input,
             self.decoder_initial_state: decoder_state,
@@ -96,18 +119,18 @@ class Bow2Seq(object):
         seq_logprobs, decoder_state = session.run([self.logprobs, self.decoder_state], feed)
         return seq_logprobs, decoder_state
 
-    def decode_beam(self, session, encoding, beam_size=8):
-        feed = {
-            self.encoding: encoding,
-            self.train: False,
-            self.beam_size: beam_size
-        }
-        seqs, scores = session.run([self.beam_output, self.beam_scores], feed)
-        return seqs, scores
+    # def decode_beam(self, session, encoding, beam_size=8):
+    #     feed = {
+    #         self.encoding: encoding,
+    #         self.train: False,
+    #         self.beam_size: beam_size
+    #     }
+    #     seqs, scores = session.run([self.beam_output, self.beam_scores], feed)
+    #     return seqs, scores
 
-def embedding_module(token_seq, vocab_size, emb_size, dropout, scope="Embedding", reuse=False):
+def embedding_module(token_seq, vocab_size, emb_size, dropout, trainable=True, reuse=False, scope="Embedding"):
     with tf.variable_scope(scope, reuse=reuse):
-        L = tf.get_variable('Embedding', [vocab_size, emb_size])
+        L = tf.get_variable('Embedding', [vocab_size, emb_size], trainable=trainable)
         word_embeddings = tf.nn.embedding_lookup(L, token_seq)
         dropped_embeddings = tf.nn.dropout(word_embeddings, dropout)
     return dropped_embeddings
@@ -135,11 +158,11 @@ def decoder_module(input_embeddings, initial_state, mask,
                    hidden_size, output_size, layers,
                    dropout, scope="Decoder"):
     with tf.variable_scope(scope) as scope:
-        cell = rnn_cell.BasicLSTMCell(hidden_size, state_is_tuple=False)
+        cell = rnn_cell.BasicLSTMCell(hidden_size, state_is_tuple=True)
         cell = rnn_cell.DropoutWrapper(cell, output_keep_prob=dropout)
         if layers > 1:
-            cell = tf.nn.rnn_cell.MultiRNNCell([cell] * layers, state_is_tuple=False)
-        cell = tf.nn.rnn_cell.OutputProjectionWrapper(cell, output_size)
+            cell = rnn_cell.MultiRNNCell([cell] * layers, state_is_tuple=True)
+        cell = rnn_cell.OutputProjectionWrapper(cell, output_size)
         seq_len = tf.reduce_sum(mask, reduction_indices=1)
         logits, state = rnn.dynamic_rnn(cell, input_embeddings,
                                     sequence_length=seq_len, initial_state=initial_state,

@@ -23,11 +23,12 @@ from docopt import docopt
 
 values_ranges = {
     #model params
-    "bow_avg": [True, False],
+    "bow_avg": [False],#False works better(evalued with 4 mil train after 2nd epoch)
     "bow_layers": [2],
     "rnn_layers": [3],
     "embedding_size": [300],
     "hidden_size": [300],
+    "share_embeddings": [True],
     #training params
     "l2": [0.0],
     "dropout": [0.7, 0.9],
@@ -35,7 +36,8 @@ values_ranges = {
     "word_dropout": [1.0],
     "vocab_size": [10000],
     "learning_rate": [0.001],
-    "embedding_learning_rate": [0.0],
+    "embedding_learning_rate": [0.0001],
+    "learning_rate_decay_factor": [0.5],
     "batch_size": [512],
     "embedding": ['glove'],
     "max_sentence_len": [15],
@@ -43,6 +45,7 @@ values_ranges = {
     #expt params
     "early_stop": ['loss'],
     "patience": [5],
+    "decay_patience": [1],
     "total_epochs": [100],
     "test_only": [False],
     "pre_trained": [None],
@@ -63,7 +66,7 @@ def get_cmd(expt_dir):
         for name, range_ in values_ranges.iteritems():
             args[name] = random.choice(range_)
 
-        dest_path = '{}/data{}_{}_{},bow_avg{},bow_l{},rnn_l{},hid_s{},emb_s{},lr{},drop{},emb{},maxlen{}'.format(expt_dir, args['dataset'], args['train_size'], args['test_size'], args['bow_avg'], args['bow_layers'], args['rnn_layers'], args['hidden_size'], args['embedding_size'], args['learning_rate'], args['dropout'], args['embedding'], args['max_sentence_len'])
+        dest_path = '{}/data{}_{}_{},bow_avg{},bow_l{},rnn_l{},hid_s{},emb_s{},lr{},drop{},emb{},share_emb{},maxlen{}'.format(expt_dir, args['dataset'], args['train_size'], args['test_size'], args['bow_avg'], args['bow_layers'], args['rnn_layers'], args['hidden_size'], args['embedding_size'], args['learning_rate'], args['dropout'], args['embedding'], args['share_embeddings'], args['max_sentence_len'])
         if not os.path.exists(dest_path):
             os.makedirs(dest_path)
             break

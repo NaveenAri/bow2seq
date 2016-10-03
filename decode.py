@@ -111,7 +111,7 @@ def translate_sent(sess, model, sentence, vocab):
         model.input_mask: [mask],
         model.train: False
     }
-    encoding = sess.run(model.encoding, feed)
+    encoding = sess.run(model.bow_vec, feed)
     encoding = encoding[0]#batch size = 1
     # Decode
     pred_words = beam_search(sess, model, encoding, vocab, max_beam_size=8)
