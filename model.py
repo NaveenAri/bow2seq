@@ -26,9 +26,9 @@ class Bow2Seq(object):
         embedding_learning_rate_decay_op = embedding_learning_rate.assign(embedding_learning_rate * config.learning_rate_decay_factor)
 
         #build model
-        encoder_input_embeddings = embedding_module(encoder_input, config.vocab_size, config.embedding_size, embedding_dropout, trainable=False, scope="BOW_Embedding")
+        encoder_input_embeddings = embedding_module(encoder_input, config.vocab_size, config.embedding_size, dropout=1.0, trainable=False, scope="BOW_Embedding")
 
-        if config.share_embeddings:
+        if config.share_embedding:
             decoder_input_embeddings = embedding_module(decoder_input, config.vocab_size, config.embedding_size, embedding_dropout, trainable=False, reuse=True, scope="BOW_Embedding")
         else:
             decoder_input_embeddings = embedding_module(decoder_input, config.vocab_size, config.embedding_size, embedding_dropout, scope="Decoder_Embedding")
@@ -54,7 +54,7 @@ class Bow2Seq(object):
             total_loss = loss + config.l2*l2_loss
             optimizer = tf.train.AdamOptimizer(learning_rate)
             train_op = optimizer.minimize(total_loss, global_step=global_step, var_list=[var for var in tf.trainable_variables() if "Embedding" not in var.name])
-            if config.embedding_learning_rate and not config.share_embeddings:
+            if config.embedding_learning_rate and not config.share_embedding:
                 we_optimizer = tf.train.AdamOptimizer(embedding_learning_rate)
                 we_train_op = we_optimizer.minimize(total_loss, var_list=[var for var in tf.trainable_variables() if "Embedding" in var.name])
                 train_op = tf.group(train_op, we_train_op)

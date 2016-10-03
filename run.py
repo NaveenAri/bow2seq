@@ -21,7 +21,7 @@ flags.DEFINE_integer('bow_layers', 2, 'number of feedforward layers to be applie
 flags.DEFINE_integer('rnn_layers', 3, 'word embedding size')
 flags.DEFINE_integer('embedding_size', 300, 'word embedding size')
 flags.DEFINE_integer('hidden_size', 300, 'hidden size')
-flags.DEFINE_boolean('share_embeddings', False, 'reuse embeddings from bow modue for decoder')
+flags.DEFINE_boolean('share_embedding', False, 'reuse embedding from bow modue for decoder')
 
 flags.DEFINE_float('l2', 0.0, 'l2 reg')
 flags.DEFINE_float('dropout', 0.7, 'keep prob')
@@ -29,7 +29,7 @@ flags.DEFINE_float('embedding_dropout', 1.0, 'keep prob applied at bow and decod
 flags.DEFINE_float('word_dropout', 1.0, 'fraction of whole words to drop out prior to computing vec representation of bow')
 flags.DEFINE_integer('vocab_size', 10000, 'max vocab size')
 flags.DEFINE_float('learning_rate', 0.001, 'initial learning rate.')
-flags.DEFINE_float('embedding_learning_rate', 0.0, 'initial learning rate for word embeddings.')
+flags.DEFINE_float('embedding_learning_rate', 0.0001, 'initial learning rate for word embeddings.')
 flags.DEFINE_float('learning_rate_decay_factor', 0.5, 'factor to multiply learning rate by to decay')
 flags.DEFINE_integer('batch_size', 512, 'batch size')
 flags.DEFINE_string('embedding', 'random', 'choose from ["glove", "senna", "hybrid", "random"]')
@@ -177,6 +177,9 @@ def run(_):
             saver.restore(session, config.pre_trained)
         else:
             session.run(tf.initialize_all_variables())
+            for var in tf.all_variables():
+                if "Embedding" in var.name:
+                    print var.name
             if config.embedding != 'random':
                 Logger.log("Initialize embeddings")
                 if config.embedding == 'glove':
@@ -186,8 +189,9 @@ def run(_):
                     word_embeddings = vocab.get_embeddings()
                 else:
                     raise NotImplementedError()
-                with tf.variable_scope("Embedding", reuse=True):
-                    session.run(tf.get_variable("Embedding").assign(word_embeddings))
+                for var in tf.all_variables():
+                    if "Embedding" in var.name:
+                        session.run(var.assign(word_embeddings))
 
         if not config.test_only:
             for epoch in xrange(config.total_epochs):

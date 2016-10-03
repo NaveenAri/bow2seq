@@ -28,7 +28,7 @@ values_ranges = {
     "rnn_layers": [3],
     "embedding_size": [300],
     "hidden_size": [300],
-    "share_embeddings": [False, True],
+    "share_embedding": [False, True],
     #training params
     "l2": [0.0],
     "dropout": [1.0],
