@@ -117,20 +117,26 @@ def run(_):
     Logger.log('train(%d) dev(%d) test(%d)'%(len(train), len(dev), len(test)))
 
     #build vocab
-    if config.embedding == 'glove':
-        vocab = GloveVocab()
-    elif config.embedding == 'senna':
-        vocab = SennaVocab()
+    if not config.pre_trained:
+        if config.embedding == 'glove':
+            vocab = GloveVocab()
+        elif config.embedding == 'senna':
+            vocab = SennaVocab()
+        else:
+            vocab = Vocab()
+        for sentence in train:
+            vocab.add(sentence)
+        if config.vocab_size:
+            vocab = vocab.prune_rares_by_top_k(config.vocab_size-2)
+        GO_ID, EOS_ID = vocab.add([GO, EOS])
+        PAD_ID = vocab.PAD_INDEX
     else:
-        vocab = Vocab()
-    for sentence in train:
-        vocab.add(sentence)
-    if config.vocab_size:
-        vocab = vocab.prune_rares_by_top_k(config.vocab_size-2)
-    GO_ID, EOS_ID = vocab.add([GO, EOS])
-    PAD_ID = vocab.PAD_INDEX
-    Logger.log(str(vocab))
+        vocab = Vocab.deserialize(os.path.join(config.pre_trained, 'vocab'))
+        GO_ID, EOS_ID = vocab[GO], vocab[EOS]
+        PAD_ID = vocab.PAD_INDEX
 
+
+    Logger.log(str(vocab))
     config.vocab_size = len(vocab)
 
     Logger.log('numericalize...')
@@ -173,22 +179,20 @@ def run(_):
         }
 
         num_epochs_worse_than_best = 0
-
         if config.pre_trained:
-            saver.restore(session, config.pre_trained)
+            saver.restore(session, os.path.join(config.pre_trained, 'model.checkpoint'))
             dev_results_old_model = calculate_metrics(session, dev, model, config, GO_ID, EOS_ID, PAD_ID)
             bestscores = {
                 'epoch': -1,
                 'dev': dev_results_old_model
             }
             bar = '*' * 10
-            Logger.log('{} Pretrained Model {}'.format(bar, -1, config.total_epochs, bar))
+            Logger.log('{} Pretrained Model {}'.format(bar, bar))
             Logger.log(pformat(bestscores, indent=2))
         else:
             session.run(tf.initialize_all_variables())
-            for var in tf.all_variables():
-                if "Embedding" in var.name:
-                    print var.name
+            for var in tf.get_collection('Embeddings'):
+                print var.name
             if config.embedding != 'random':
                 Logger.log("Initialize embeddings")
                 if config.embedding == 'glove':
@@ -198,9 +202,8 @@ def run(_):
                     word_embeddings = vocab.get_embeddings()
                 else:
                     raise NotImplementedError()
-                for var in tf.all_variables():
-                    if "Embedding" in var.name:
-                        session.run(var.assign(word_embeddings))
+                for var in tf.get_collection('Embeddings'):
+                    session.run(var.assign(word_embeddings))
 
         if not config.test_only:
             for epoch in xrange(config.total_epochs):

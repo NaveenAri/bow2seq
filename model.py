@@ -131,6 +131,8 @@ class Bow2Seq(object):
 def embedding_module(token_seq, vocab_size, emb_size, dropout, trainable=True, reuse=False, scope="Embedding"):
     with tf.variable_scope(scope, reuse=reuse):
         L = tf.get_variable('Embedding', [vocab_size, emb_size], trainable=trainable)
+        if not reuse:
+            tf.add_to_collection('Embeddings', L)
         word_embeddings = tf.nn.embedding_lookup(L, token_seq)
         dropped_embeddings = tf.nn.dropout(word_embeddings, dropout)
     return dropped_embeddings
