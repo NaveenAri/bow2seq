@@ -117,7 +117,7 @@ def run(_):
     Logger.log('train(%d) dev(%d) test(%d)'%(len(train), len(dev), len(test)))
 
     #build vocab
-    if not config.pre_trained:
+    if config.pre_trained == 'NO_PRETRAIN':
         if config.embedding == 'glove':
             vocab = GloveVocab()
         elif config.embedding == 'senna':
