@@ -48,7 +48,7 @@ values_ranges = {
     "decay_patience": [0],
     "total_epochs": [100],
     "test_only": [False],
-    "pre_trained": [None],
+    "pre_trained": [''],
     "train_size": [4000000],
     "test_size": [100000],
     "seed": [0],
