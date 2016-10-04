@@ -37,7 +37,7 @@ values_ranges = {
     "vocab_size": [10000],
     "learning_rate": [0.001],
     "embedding_learning_rate": [0.0001],
-    "learning_rate_decay_factor": [0.5],
+    "learning_rate_decay_factor": [0.9],
     "batch_size": [512],
     "embedding": ['glove'],
     "max_sentence_len": [15],
@@ -45,7 +45,7 @@ values_ranges = {
     #expt params
     "early_stop": ['loss'],
     "patience": [5],
-    "decay_patience": [1],
+    "decay_patience": [0],
     "total_epochs": [100],
     "test_only": [False],
     "pre_trained": [None],
@@ -65,7 +65,7 @@ def get_cmd(expt_dir):
         args = {}
         for name, range_ in values_ranges.iteritems():
             args[name] = random.choice(range_)
-        dest_path = '{}/data{}_{}_{},bow_avg{},bow_l{},rnn_l{},hid_s{},emb_s{},lr{},drop{},emb{},share_emb{},maxlen{}'.format(expt_dir, args['dataset'], args['train_size'], args['test_size'], args['bow_avg'], args['bow_layers'], args['rnn_layers'], args['hidden_size'], args['embedding_size'], args['learning_rate'], args['dropout'], args['embedding'], args['share_embedding'], args['max_sentence_len'])
+        dest_path = '{}/data{}_{}_{},bow_avg{},bow_l{},rnn_l{},hid_s{},emb_s{},lr{},lr_dec{},lr_decpat{},drop{},emb{},share_emb{},maxlen{}'.format(expt_dir, args['dataset'], args['train_size'], args['test_size'], args['bow_avg'], args['bow_layers'], args['rnn_layers'], args['hidden_size'], args['embedding_size'], args['learning_rate'], args['learning_rate_decay_factor'], args['decay_patience'], args['dropout'], args['embedding'], args['share_embedding'], args['max_sentence_len'])
         if args['pre_trained']:
             dest_path+=',pre_trained{}'.format(args['pre_trained'])
         
