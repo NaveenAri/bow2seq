@@ -179,7 +179,7 @@ def run(_):
         }
 
         num_epochs_worse_than_best = 0
-        if config.pre_trained:
+        if config.pre_trained != 'NO_PRETRAIN':
             saver.restore(session, os.path.join(config.pre_trained, 'model.checkpoint'))
             dev_results_old_model = calculate_metrics(session, dev, model, config, GO_ID, EOS_ID, PAD_ID)
             bestscores = {
