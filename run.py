@@ -2,6 +2,8 @@ import os
 import random
 from time import time, ctime
 import re
+import itertools
+from collections import defaultdict
 import numpy as np
 from pprint import pformat
 import json
@@ -39,11 +41,12 @@ flags.DEFINE_string('dataset', 'ptb', 'choose from ["1bw", "ptb"]')
 flags.DEFINE_string('early_stop', 'loss', 'early stoppping criterion ["accuracy","loss"]')
 flags.DEFINE_integer('patience', 5, 'patience for early stopping')
 flags.DEFINE_integer('decay_patience', 0, 'patience for decaying learning rate')
+flags.DEFINE_integer('eval_granularity', 5, 'granularity at which to evaluate dev results. 0 for no subdivision')
 flags.DEFINE_integer('total_epochs', 32, 'max trainging epochs')
 flags.DEFINE_boolean('test_only', False, 'only test already trained model')
 flags.DEFINE_string('pre_trained', None, 'path to load pretrained model from')
-flags.DEFINE_integer('train_size', 0, 'max items to use for trainig')
-flags.DEFINE_integer('test_size', 0, 'max items to use for dev and test')
+flags.DEFINE_integer('train_size', 5, 'max items to use for trainig')
+flags.DEFINE_integer('test_size', 2, 'max items to use for dev and test')
 flags.DEFINE_integer('seed', 0, 'seed for rng')
 flags.DEFINE_string('dest_path', 'temp_expts/%s'%re.sub(r'\s+|:', '_', ctime()).lower(), 'path to save model to')
 
@@ -70,10 +73,12 @@ def padded(seqs, PAD_ID):
     seqs = map(lambda token_list: token_list + [PAD_ID] * (maxlen - len(token_list)), seqs)
     return np.asarray(seqs)
 
-def batches(seqs, batch_size, GO_ID, EOS_ID, PAD_ID, shuffle=False):
-    if shuffle:
+def batches(seqs, batch_size, GO_ID, EOS_ID, PAD_ID, shuffle=False, group=False):
+    if not group and shuffle:
         random.shuffle(seqs)
     starts = range(0, len(seqs), batch_size)
+    if group:
+        random.shuffle(starts)
     for start in tqdm(starts):
         end = start + batch_size
         seq_batch = seqs[start:end]
@@ -86,20 +91,30 @@ def batches(seqs, batch_size, GO_ID, EOS_ID, PAD_ID, shuffle=False):
         output_mask = (decoder_target != PAD_ID).astype(np.int32)
         yield encoder_input, decoder_input, decoder_target, input_mask, output_mask
 
-def calculate_metrics(session, seqs, model, config, GO_ID, EOS_ID, PAD_ID, train=False):
-    losses = []
-    correct = 0
-    total = 0
-    for batch in batches(seqs, config.batch_size, GO_ID, EOS_ID, PAD_ID, shuffle=train):
+def calculate_metrics(session, seqs, model, config, GO_ID, EOS_ID, PAD_ID, bucket_size, train=False):
+    bucket_losses = defaultdict(list)
+    bucket_correct = defaultdict(lambda: 0)
+    bucket_total = defaultdict(lambda: 0)
+    for batch in batches(seqs, config.batch_size, GO_ID, EOS_ID, PAD_ID, shuffle=train, group=True):
         encoder_input, decoder_input, decoder_target, input_mask, output_mask = batch
-        loss_batch, correct_batch, total_batch = model.step(session, 
+        mean_loss_per_seq, correct_per_seq, seq_len = model.step(session, 
             encoder_input, decoder_input, decoder_target, input_mask, output_mask, train)
-        losses.append(loss_batch)
-        correct += correct_batch
-        total += total_batch
-    loss = float(sum(losses)) / len(losses)
-    accuracy = float(correct) / total
-    return {'loss': loss, 'acc': accuracy}
+        for loss, correct, length in itertools.izip(mean_loss_per_seq, correct_per_seq, seq_len):
+            bucket = length+(bucket_size - length%bucket_size)
+            bucket_losses[bucket].append(loss)
+            bucket_correct[bucket] += correct
+            bucket_total[bucket] += length
+    results = {}
+    for bucket in bucket_losses.iterkeys():
+        bucket_loss = sum(bucket_losses[bucket])/float(len(bucket_losses[bucket]))
+        bucket_acc = bucket_correct[bucket]/float(bucket_total[bucket])
+        results[bucket] = {'loss': bucket_loss, 'acc': bucket_acc}
+
+    avg_loss = sum([bucket_results['loss'] for bucket_results in results.itervalues()])/float(len(results))
+    avg_acc = sum([bucket_results['acc'] for bucket_results in results.itervalues()])/float(len(results))
+    results['loss'] = avg_loss
+    results['acc'] = avg_acc
+    return results
 
 def run(_):
     FLAGS._parse_flags()
@@ -117,7 +132,7 @@ def run(_):
     Logger.log('train(%d) dev(%d) test(%d)'%(len(train), len(dev), len(test)))
 
     #build vocab
-    if config.pre_trained == 'NO_PRETRAIN':
+    if not config.pre_trained:
         if config.embedding == 'glove':
             vocab = GloveVocab()
         elif config.embedding == 'senna':
@@ -130,13 +145,15 @@ def run(_):
             vocab = vocab.prune_rares_by_top_k(config.vocab_size-2)
         GO_ID, EOS_ID = vocab.add([GO, EOS])
         PAD_ID = vocab.PAD_INDEX
+        Logger.log('Built new vocab: %s'%str(vocab))
     else:
         vocab = Vocab.deserialize(os.path.join(config.pre_trained, 'vocab'))
         GO_ID, EOS_ID = vocab[GO], vocab[EOS]
         PAD_ID = vocab.PAD_INDEX
+        Logger.log('Restored vocab: %s'%str(vocab))
 
 
-    Logger.log(str(vocab))
+    
     config.vocab_size = len(vocab)
 
     Logger.log('numericalize...')
@@ -179,9 +196,9 @@ def run(_):
         }
 
         num_epochs_worse_than_best = 0
-        if config.pre_trained != 'NO_PRETRAIN':
+        if config.pre_trained:
             saver.restore(session, os.path.join(config.pre_trained, 'model.checkpoint'))
-            dev_results_old_model = calculate_metrics(session, dev, model, config, GO_ID, EOS_ID, PAD_ID)
+            dev_results_old_model = calculate_metrics(session, dev, model, config, GO_ID, EOS_ID, PAD_ID, config.eval_granularity)
             bestscores = {
                 'epoch': -1,
                 'dev': dev_results_old_model
@@ -211,8 +228,8 @@ def run(_):
                 bar = '*' * 10
                 Logger.log('{} Epoch {} / {} {}'.format(bar, epoch, config.total_epochs, bar))
 
-                train_results = calculate_metrics(session, train, model, config, GO_ID, EOS_ID, PAD_ID, train=True)
-                dev_results = calculate_metrics(session, dev, model, config, GO_ID, EOS_ID, PAD_ID)
+                train_results = calculate_metrics(session, train, model, config, GO_ID, EOS_ID, PAD_ID, config.eval_granularity, train=True)
+                dev_results = calculate_metrics(session, dev, model, config, GO_ID, EOS_ID, PAD_ID, config.eval_granularity)
                 scores = {
                     'epoch': epoch,
                     'train': train_results,
@@ -263,7 +280,7 @@ def run(_):
         if os.path.exists(save_location):
             Logger.log('Testing...')
             saver.restore(session, save_location)
-            test_results = calculate_metrics(session, test, model, config, GO_ID, EOS_ID, PAD_ID)
+            test_results = calculate_metrics(session, test, model, config, GO_ID, EOS_ID, PAD_ID, config.eval_granularity)
             bestscores['test'] = test_results
             Logger.log(pformat(config))
             Logger.log(pformat(bestscores))

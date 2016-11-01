@@ -1,13 +1,13 @@
 """Run multiple experiments in parallel with different parameters.
 
 Usage:
-    run_experiments.py
+    launcher.py
                [--expt_dir=<expt_dir>]
                [--max_gpus=<gpus>]
                [--gpus=<gpus>]
                [--autolaunch]
-    run_experiments.py (-h | --help)
-    run_experiments.py --version
+    launcher.py (-h | --help)
+    launcher.py --version
 
 Options:
     --expt_dir=<expt_dir>  [default: expts]
@@ -48,7 +48,7 @@ values_ranges = {
     "decay_patience": [0],
     "total_epochs": [100],
     "test_only": [False],
-    "pre_trained": ['NO_PRETRAIN'],
+    "pre_trained": [None],
     "train_size": [4000000],
     "test_size": [100000],
     "seed": [0],
@@ -84,7 +84,7 @@ def get_cmd(expt_dir):
     return strcmd
 
 if __name__ == '__main__':
-    docopts = docopt(__doc__, version='Run MT_DMN expts 0.1')
+    docopts = docopt(__doc__, version='Run Bow2Seq expts 0.1')
     max_gpus = int()
 
     if docopts['--max_gpus']:

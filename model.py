@@ -45,13 +45,13 @@ class Bow2Seq(object):
         decoder_state = tf.concat(1, decoder_state)
 
         pred = tf.argmax(logits, 2)
-        logprobs, loss, correct, total = sequence_logprobs_loss_correct_total(logits, decoder_target, output_mask)
+        logprobs, mean_loss_per_seq, correct_per_seq, seq_len = sequence_logprobs_loss_correct_total(logits, decoder_target, output_mask)
 
         #optimizer
         with tf.variable_scope('Optimizer'):
             l2_loss_elems = tf.get_collection('l2_loss')
             l2_loss = tf.add_n(l2_loss_elems) if len(l2_loss_elems)>0 else 0.0
-            total_loss = loss + config.l2*l2_loss
+            total_loss = tf.reduce_mean(mean_loss_per_seq) + config.l2*l2_loss
             optimizer = tf.train.AdamOptimizer(learning_rate)
             train_op = optimizer.minimize(total_loss, global_step=global_step, var_list=[var for var in tf.trainable_variables() if "Embedding" not in var.name])
             if config.embedding_learning_rate and not config.share_embedding:
@@ -75,9 +75,9 @@ class Bow2Seq(object):
         self.bow_vec = bow_vec
         self.logprobs = logprobs
         self.pred = pred
-        self.loss = loss
-        self.correct = correct
-        self.total = total
+        self.mean_loss_per_seq = mean_loss_per_seq
+        self.correct_per_seq = correct_per_seq
+        self.seq_len = seq_len
         self.global_step = global_step
         self.decoder_state = decoder_state
 
@@ -98,10 +98,10 @@ class Bow2Seq(object):
             self.train: train
         }
         if train:
-            loss_batch, correct_batch, total_batch, _ = session.run([self.loss, self.correct, self.total, self.train_op], feed)
+            mean_loss_per_seq, correct_per_seq, seq_len, _ = session.run([self.mean_loss_per_seq, self.correct_per_seq, self.seq_len, self.train_op], feed)
         else:
-            loss_batch, correct_batch, total_batch = session.run([self.loss, self.correct, self.total], feed)
-        return loss_batch, correct_batch, total_batch
+            mean_loss_per_seq, correct_per_seq, seq_len = session.run([self.mean_loss_per_seq, self.correct_per_seq, self.seq_len], feed)
+        return mean_loss_per_seq, correct_per_seq, seq_len
 
     def decode(self, session, decoder_input, decoder_state_array):
         print 'decoder_state', decoder_state_array.shape
@@ -185,20 +185,25 @@ def sequence_logprobs_loss_correct_total(logits, labels, weights, scope="LossAnd
     labels_1d = tf.reshape(labels, [-1])
     weights_1d = tf.reshape(weights, [-1])
     seq_len = tf.reduce_sum(weights, 1)
+    #total = tf.reduce_sum(seq_len)
+
+    #logprobs
+    logprobs_2d = tf.nn.log_softmax(logits_2d)
+    logprobs = tf.reshape(logprobs_2d, [batch_size, max_time, num_classes])
+
+    #correct
+    correct_matrix = tf.to_int32(tf.equal(tf.argmax(logits, 2), tf.to_int64(labels))) * weights
+    correct_per_seq = tf.reduce_sum(correct_matrix,1)
+    #correct = tf.reduce_sum(correct_matrix)
+
     #loss
     losses_1d = tf.nn.sparse_softmax_cross_entropy_with_logits(logits_2d, labels_1d) * tf.to_float(weights_1d)
     losses_2d = tf.reshape(losses_1d, tf.pack([batch_size, max_time]))
     mean_loss_per_seq = tf.reduce_sum(losses_2d, 1)/tf.to_float(seq_len)
-    loss = tf.reduce_mean(mean_loss_per_seq)
-    #logprobs
-    logprobs_2d = tf.nn.log_softmax(logits_2d)
-    logprobs = tf.reshape(logprobs_2d, [batch_size, max_time, num_classes])
-    #correct
-    correct_matrix = tf.to_int32(tf.equal(tf.argmax(logits, 2), tf.to_int64(labels))) * weights
-    correct = tf.reduce_sum(correct_matrix)
-    #total
-    total = tf.reduce_sum(seq_len)
-    return logprobs, loss, correct, total
+    #loss = tf.reduce_mean(mean_loss_per_seq)
+
+    #return logprobs, loss, correct, total
+    return logprobs, mean_loss_per_seq, correct_per_seq, seq_len
 
 
 # ###BEAM SEARCH###

@@ -99,9 +99,11 @@ def beam_search(sess, model, encoding, vocab, max_beam_size, max_sent_len=50):
 
 
 def translate_sent(sess, model, sentence, vocab):
+    print '\n' + '*'*100 + '\n'
+    sentence = sentence.lower().strip()
     print 'input sent: %s'%sentence
     #tokenize
-    seq = vocab.words2indices(sentence.lower().strip().split())
+    seq = vocab.words2indices(sentence.split())
     mask = np.ones_like(seq)
     print 'seq', seq
     print 'mask', mask
