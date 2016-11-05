@@ -50,8 +50,6 @@ flags.DEFINE_integer('test_size', 2, 'max items to use for dev and test')
 flags.DEFINE_integer('seed', 0, 'seed for rng')
 flags.DEFINE_string('dest_path', 'temp_expts/%s'%re.sub(r'\s+|:', '_', ctime()).lower(), 'path to save model to')
 
-GO ='_GO'
-EOS = '_EOS'
 
 def get_split(fname, max_sentence_len=0, max_items=0):
     lines = []
@@ -132,6 +130,7 @@ def run(_):
     Logger.log('train(%d) dev(%d) test(%d)'%(len(train), len(dev), len(test)))
 
     #build vocab
+    Logger.log('load vocab...')
     if not config.pre_trained:
         if config.embedding == 'glove':
             vocab = GloveVocab()
@@ -139,22 +138,18 @@ def run(_):
             vocab = SennaVocab()
         else:
             vocab = Vocab()
-        for sentence in train:
-            vocab.add(sentence)
-        if config.vocab_size:
-            vocab = vocab.prune_rares_by_top_k(config.vocab_size-2)
-        GO_ID, EOS_ID = vocab.add([GO, EOS])
-        PAD_ID = vocab.PAD_INDEX
         Logger.log('Built new vocab: %s'%str(vocab))
     else:
         vocab = Vocab.deserialize(os.path.join(config.pre_trained, 'vocab'))
-        GO_ID, EOS_ID = vocab[GO], vocab[EOS]
-        PAD_ID = vocab.PAD_INDEX
         Logger.log('Restored vocab: %s'%str(vocab))
 
-
-    
+    Logger.log('prune vocab...')
+    for sentence in train:
+        vocab.add(sentence)
+    if config.vocab_size:
+        vocab = vocab.prune_rares_by_top_k(config.vocab_size)
     config.vocab_size = len(vocab)
+    Logger.log('Vocab size(after updating and then pruning): %s'%str(vocab))    
 
     Logger.log('numericalize...')
     train = [vocab.words2indices(sentence) for sentence in train]
@@ -198,7 +193,7 @@ def run(_):
         num_epochs_worse_than_best = 0
         if config.pre_trained:
             saver.restore(session, os.path.join(config.pre_trained, 'model.checkpoint'))
-            dev_results_old_model = calculate_metrics(session, dev, model, config, GO_ID, EOS_ID, PAD_ID, config.eval_granularity)
+            dev_results_old_model = calculate_metrics(session, dev, model, config, vocab.GO_INDEX, vocab.EOS_INDEX, vocab.PAD_INDEX, config.eval_granularity)
             bestscores = {
                 'epoch': -1,
                 'dev': dev_results_old_model
@@ -228,8 +223,8 @@ def run(_):
                 bar = '*' * 10
                 Logger.log('{} Epoch {} / {} {}'.format(bar, epoch, config.total_epochs, bar))
 
-                train_results = calculate_metrics(session, train, model, config, GO_ID, EOS_ID, PAD_ID, config.eval_granularity, train=True)
-                dev_results = calculate_metrics(session, dev, model, config, GO_ID, EOS_ID, PAD_ID, config.eval_granularity)
+                train_results = calculate_metrics(session, train, model, config, vocab.GO_INDEX, vocab.EOS_INDEX, vocab.PAD_INDEX, config.eval_granularity, train=True)
+                dev_results = calculate_metrics(session, dev, model, config, vocab.GO_INDEX, vocab.EOS_INDEX, vocab.PAD_INDEX, config.eval_granularity)
                 scores = {
                     'epoch': epoch,
                     'train': train_results,
@@ -280,7 +275,7 @@ def run(_):
         if os.path.exists(save_location):
             Logger.log('Testing...')
             saver.restore(session, save_location)
-            test_results = calculate_metrics(session, test, model, config, GO_ID, EOS_ID, PAD_ID, config.eval_granularity)
+            test_results = calculate_metrics(session, test, model, config, vocab.GO_INDEX, vocab.EOS_INDEX, vocab.PAD_INDEX, config.eval_granularity)
             bestscores['test'] = test_results
             Logger.log(pformat(config))
             Logger.log(pformat(bestscores))

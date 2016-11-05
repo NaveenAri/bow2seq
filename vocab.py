@@ -163,7 +163,7 @@ class Vocab(SimpleVocab):
     NOTE: PAD is always represented by the 1 index.
     """
 
-    def __init__(self, unk='<UNK>', pad='<PAD>'):
+    def __init__(self, unk='<UNK>', pad='<PAD>', go='<GO>', eos='<EOS>'):
         """Construct a Vocab object.
 
         :param unk: string to represent the unknown word (UNK). It is always represented by the 0 index.
@@ -174,10 +174,16 @@ class Vocab(SimpleVocab):
         self.unk = unk
         self.PAD_INDEX = 1
         self.pad = pad
+        self.GO_INDEX = 2
+        self.go = go
+        self.EOS_INDEX = 3
+        self.eos = eos
 
         # assign an index for UNK
         self.add(self.unk, count=0)
         self.add(self.pad, count=0)
+        self.add(self.go, count=0)
+        self.add(self.go, count=0)
 
     def __getitem__(self, word):
         """Get the index for a word.
@@ -188,7 +194,7 @@ class Vocab(SimpleVocab):
 
     def copy(self, keep_words=True):
         if not keep_words:
-            return self.__class__(self.unk, self.pad)
+            return self.__class__(self.unk, self.pad, self.go, self.eos)
         else:
             return deepcopy(self)
 
@@ -209,7 +215,7 @@ class Vocab(SimpleVocab):
         # make a deep copy and reset its contents
         v = self.copy(keep_words=False)
         for w in self:
-            if self._counts[w] >= cutoff or w == self.unk or w == self.pad:  # don't remove unk or pad
+            if self._counts[w] >= cutoff or w == self.unk or w == self.pad or w == self.go or w == self.eos:  # don't remove unk or pad
                 v.add(w, count=self._counts[w])
         return v
 
@@ -231,6 +237,8 @@ class Vocab(SimpleVocab):
                 'counts': dict(self._counts),
                 'unk': self.unk,
                 'pad': self.pad,
+                'go': self.go,
+                'eos': self.eos,
                 'index2word': self._index2word,
             }, f)
 
@@ -240,7 +248,7 @@ class Vocab(SimpleVocab):
         """
         with open(fname) as f:
             d = json.load(f)
-            v = cls(unk=d['unk'], pad=d['pad'])
+            v = cls(unk=d['unk'], pad=d['pad'], go=d['go'], eos=d['eos'])
             v._counts = Counter(d['counts'])
             v._index2word = d['index2word']
             v._word2index = {w: i for i, w in enumerate(d['index2word'])}
@@ -249,8 +257,8 @@ class Vocab(SimpleVocab):
 
 class EmbeddedVocab(Vocab):
 
-    def __init__(self, unk='<UNK>', pad='<PAD>'):
-        super(EmbeddedVocab, self).__init__(unk=unk, pad=pad)
+    def __init__(self, unk='<UNK>', pad='<PAD>', go='<GO>', eos='<EOS>'):
+        super(EmbeddedVocab, self).__init__(unk=unk, pad=pad, go=go, eos=eos)
         self.E = None
 
     def get_embeddings(self):
@@ -307,8 +315,8 @@ class SennaVocab(EmbeddedVocab):
     words_url = 'https://raw.githubusercontent.com/baojie/senna/master/hash/words.lst'
     n_dim = 50
 
-    def __init__(self, unk='UNKNOWN', pad='PAD'):
-        super(SennaVocab, self).__init__(unk=unk, pad=pad)
+    def __init__(self, unk='UNKNOWN', pad='PAD', go='<GO>', eos='<EOS>'):
+        super(SennaVocab, self).__init__(unk=unk, pad=pad, go=go, eos=eos)
 
     @classmethod
     def gen_word_list(cls, fname):
@@ -369,8 +377,8 @@ class GloveVocab(EmbeddedVocab):
                                            [50, 100, 200, 300], '822MB', '6B token wikipedia 2014 + gigaword 5'),
     }
 
-    def __init__(self, unk='<UNK>', pad='<PAD>'):
-        super(GloveVocab, self).__init__(unk=unk, pad=pad)
+    def __init__(self, unk='<UNK>', pad='<PAD>', go='<GO>', eos='<EOS>'):
+        super(GloveVocab, self).__init__(unk=unk, pad=pad, go=go, eos=eos)
 
     def get_embeddings(self, rand=None, dtype='float32', corpus='common_crawl_840', n_dim=300):
         """
