@@ -3,7 +3,6 @@
 Usage:
     launcher.py
                [--expt_dir=<expt_dir>]
-               [--max_gpus=<gpus>]
                [--gpus=<gpus>]
                [--autolaunch]
     launcher.py (-h | --help)
@@ -85,36 +84,20 @@ def get_cmd(expt_dir):
 
 if __name__ == '__main__':
     docopts = docopt(__doc__, version='Run Bow2Seq expts 0.1')
-    max_gpus = int()
-
-    if docopts['--max_gpus']:
+    gpus = docopts['--gpus'].split(',')
+    if docopts['--autolaunch']:
+        assert len(docopts['--gpus']) == 1, 'can only autolaunch with 1 gpus. Was given gpus=%s'%gpus
         while True:
-            num_jobs = len(subprocess.check_output('dq-jobs').strip().split('\n'))-3
-            if num_jobs < max_gpus:
-                cmd = get_cmd(docopts['--expt_dir'])
-                if cmd:
-                    print cmd
-                    cmd = 'dq_submit %s'%cmd
-                    subprocess.call(cmd)
-                else:
-                    print 'could not find args for expt'
-                    break
+            cmd = get_cmd(docopts['--expt_dir'])
+            if cmd:
+                print cmd
+                cmd = 'CUDA_VISIBLE_DEVICES=%s %s'%(gpus[0], cmd)
+                subprocess.call(cmd, shell=True)
             time.sleep(2)
     else:
-        gpus = docopts['--gpus'].split(',')
-        if docopts['--autolaunch']:
-            assert len(docopts['--gpus']) == 1, 'can only autolaunch with 1 gpus. Was given gpus=%s'%gpus
-            while True:
-                cmd = get_cmd(docopts['--expt_dir'])
-                if cmd:
-                    print cmd
-                    cmd = 'CUDA_VISIBLE_DEVICES=%s %s'%(gpus[0], cmd)
-                    subprocess.call(cmd, shell=True)
-                time.sleep(2)
-        else:
-            for gpu in gpus:
-                cmd = get_cmd(docopts['--expt_dir'])
-                assert cmd is not None
-                print cmd
-                cmd = 'CUDA_VISIBLE_DEVICES=%s %s'%(gpu, cmd)
-                subprocess.Popen(cmd, shell=True)
+        for gpu in gpus:
+            cmd = get_cmd(docopts['--expt_dir'])
+            assert cmd is not None
+            print cmd
+            cmd = 'CUDA_VISIBLE_DEVICES=%s %s'%(gpu, cmd)
+            subprocess.Popen(cmd, shell=True)
