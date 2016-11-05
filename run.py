@@ -129,8 +129,9 @@ def run(_):
     Logger.log('train(%d) dev(%d) test(%d)'%(len(train), len(dev), len(test)))
 
     #build vocab
+    vocab_save_location = os.path.join(config.dest_path, 'vocab')
     Logger.log('load vocab...')
-    if not config.pre_trained:
+    if not os.path.exists(vocab_save_location):
         if config.embedding == 'glove':
             vocab = GloveVocab()
         elif config.embedding == 'senna':
@@ -139,7 +140,7 @@ def run(_):
             vocab = Vocab()
         Logger.log('Built new vocab: %s'%str(vocab))
     else:
-        vocab = Vocab.deserialize(os.path.join(config.pre_trained, 'vocab'))
+        vocab = Vocab.deserialize(vocab_save_location)
         Logger.log('Restored vocab: %s'%str(vocab))
 
     Logger.log('prune vocab...')
@@ -160,20 +161,20 @@ def run(_):
     
     saver = tf.train.Saver()
     Logger.log('saving vocab and config')
-    vocab.serialize(os.path.join(config.dest_path, 'vocab'))
+    vocab.serialize(vocab_save_location)
     joblib.dump(config, os.path.join(config.dest_path, "config.pkl"))
 
     with open(os.path.join(config.dest_path, 'config.json'), 'wb') as f:
         json.dump(config, f, indent=2)
     Logger.log(pformat(config, indent=2))
     
-    save_location = os.path.join(config.dest_path, "model.checkpoint")
+    model_save_location = os.path.join(config.dest_path, "model.checkpoint")
 
     with tf.Session() as session:
 
         def save(scores, save_model=True):
             if save_model:
-                saver.save(session, save_location)
+                saver.save(session, model_save_location)
             with open(os.path.join(config.dest_path, 'best.json'), 'wb') as f:
                 json.dump(scores, f, indent=2)
         # You can visualize the graph structure by running `tensorboard --logdir=/%(dest_path)/%(name)s/`
@@ -190,8 +191,8 @@ def run(_):
         }
 
         num_epochs_worse_than_best = 0
-        if config.pre_trained:
-            saver.restore(session, os.path.join(config.pre_trained, 'model.checkpoint'))
+        if os.path.exists(model_save_location):
+            saver.restore(session, model_save_location)
             dev_results_old_model = calculate_metrics(session, dev, model, config, vocab.GO_INDEX, vocab.EOS_INDEX, vocab.PAD_INDEX, config.eval_granularity)
             bestscores = {
                 'epoch': -1,
@@ -271,9 +272,9 @@ def run(_):
                 Logger.log('finished in {}s'.format(time() - train_start))
 
         ###
-        if os.path.exists(save_location):
+        if os.path.exists(model_save_location):
             Logger.log('Testing...')
-            saver.restore(session, save_location)
+            saver.restore(session, model_save_location)
             test_results = calculate_metrics(session, test, model, config, vocab.GO_INDEX, vocab.EOS_INDEX, vocab.PAD_INDEX, config.eval_granularity)
             bestscores['test'] = test_results
             Logger.log(pformat(config))
