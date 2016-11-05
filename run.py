@@ -71,13 +71,29 @@ def padded(seqs, PAD_ID):
     return np.asarray(seqs)
 
 def batches(seqs, batch_size, GO_ID, EOS_ID, PAD_ID, shuffle=False, group=False):
-    if not group and shuffle:
-        random.shuffle(seqs)
-    starts = range(0, len(seqs), batch_size)
-    if group:
+    if not group:
+        starts = range(0, len(seqs), batch_size)
+        batch_ranges = [(start, start+batch_size) for start in starts]
+    else:
         seqs.sort(key=len)
-        random.shuffle(starts)
-    for start in tqdm(starts):
+        max_batch_volume = 1024*25
+        batch_ranges = []
+        batch_max_len = 0
+        batch_start=0
+        for batch_end, seq in enumerate(seqs, 1):
+            if (batch_end-batch_start)*max(len(seq), batch_max_len)>max_batch_volume or batch_end==len(seqs):
+                batch_ranges.append((batch_start, batch_end))
+                batch_max_len=0
+                batch_start = batch_end
+            else:
+                batch_max_len = max(len(seq), batch_max_len)
+
+    if shuffle:
+        random.shuffle(batch_ranges)
+        if not group:
+            random.shuffle(seqs)
+
+    for (start, end) in tqdm(batch_ranges):
         end = start + batch_size
         seq_batch = seqs[start:end]
         #add go, eos, pad toks
