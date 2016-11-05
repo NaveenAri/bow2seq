@@ -24,11 +24,11 @@ from docopt import docopt
 values_ranges = {
     #model params
     "bow_avg": [False],#False works sightly better(evalued with 4 mil train after 10 epochs)
-    "bow_layers": [2],
-    "rnn_layers": [3],
+    "bow_layers": [3],
+    "rnn_layers": [4],
     "embedding_size": [300],
     "hidden_size": [300],
-    "share_embedding": [False, True],
+    "share_embedding": [False],
     #training params
     "l2": [0.0],
     "dropout": [1.0],
@@ -37,19 +37,19 @@ values_ranges = {
     "vocab_size": [10000],
     "learning_rate": [0.001],
     "embedding_learning_rate": [0.0001],
-    "learning_rate_decay_factor": [0.9],
+    "learning_rate_decay_factor": [0.95],
     "batch_size": [512],
     "embedding": ['glove'],
-    "max_sentence_len": [15],
+    "max_sentence_len": [25],
     "dataset": ['1bw'],
     #expt params
     "early_stop": ['loss'],
     "patience": [5],
     "decay_patience": [0],
+    "eval_granularity": [5],
     "total_epochs": [100],
     "test_only": [False],
-    "pre_trained": [None],
-    "train_size": [4000000],
+    "train_size": [10000000],
     "test_size": [100000],
     "seed": [0],
 }
