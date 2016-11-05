@@ -75,6 +75,7 @@ def batches(seqs, batch_size, GO_ID, EOS_ID, PAD_ID, shuffle=False, group=False)
         random.shuffle(seqs)
     starts = range(0, len(seqs), batch_size)
     if group:
+        seqs.sort(key=len)
         random.shuffle(starts)
     for start in tqdm(starts):
         end = start + batch_size
