@@ -120,9 +120,10 @@ def calculate_metrics(session, seqs, model, config, GO_ID, EOS_ID, PAD_ID, bucke
             bucket_total[bucket] += length
     results = {}
     for bucket in bucket_losses.iterkeys():
-        bucket_loss = sum(bucket_losses[bucket])/float(len(bucket_losses[bucket]))
+        bucket_size = len(bucket_losses[bucket])
+        bucket_loss = sum(bucket_losses[bucket])/float(bucket_size)
         bucket_acc = bucket_correct[bucket]/float(bucket_total[bucket])
-        results[bucket] = {'loss': bucket_loss, 'acc': bucket_acc}
+        results[bucket] = {'loss': bucket_loss, 'acc': bucket_acc, 'size': bucket_size}
 
     avg_loss = sum([bucket_results['loss'] for bucket_results in results.itervalues()])/float(len(results))
     avg_acc = sum([bucket_results['acc'] for bucket_results in results.itervalues()])/float(len(results))
