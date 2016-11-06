@@ -34,8 +34,13 @@ class Bow2Seq(object):
             decoder_input_embeddings = embedding_module(decoder_input, config.vocab_size, config.embedding_size, embedding_dropout, scope="Decoder_Embedding")
 
         bow_vec = bow_module(encoder_input_embeddings, input_mask, config.embedding_size, 1.0, word_dropout, config.bow_layers, avg=config.bow_avg)
-        #decoder_initial_state = tf.tile(bow_vec, (1, 2*config.rnn_layers), name='decoder_initial_state')#using MultiLayer LSTM
-        decoder_initial_state = tuple([rnn_cell.LSTMStateTuple(c=tf.identity(bow_vec), h=tf.identity(bow_vec)) for i in xrange(config.rnn_layers)])
+        if config.embedding_size == config.hidden_size:
+            rnn_state = bow_vec
+        else:
+            with tf.variable_scope('resize_bow_vec_for_rnn'):
+                W = tf.get_variable("W", [config.embedding_size, config.hidden_size])
+                rnn_state = tf.matmul(bow_vec, W)
+        decoder_initial_state = tuple([rnn_cell.LSTMStateTuple(c=tf.identity(rnn_state), h=tf.identity(rnn_state)) for i in xrange(config.rnn_layers)])
         logits, decoder_state = decoder_module(decoder_input_embeddings, decoder_initial_state, output_mask,
                                 config.hidden_size, config.vocab_size, config.rnn_layers,
                                 dropout)

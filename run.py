@@ -22,7 +22,7 @@ flags.DEFINE_boolean('bow_avg', False, 'average the words bow word embeddings to
 flags.DEFINE_integer('bow_layers', 2, 'number of feedforward layers to be applied to bow vector')
 flags.DEFINE_integer('rnn_layers', 3, 'word embedding size')
 flags.DEFINE_integer('embedding_size', 300, 'word embedding size')
-flags.DEFINE_integer('hidden_size', 300, 'hidden size')
+flags.DEFINE_integer('hidden_size', 512, 'hidden size')
 flags.DEFINE_boolean('share_embedding', False, 'reuse embedding from bow modue for decoder')
 
 flags.DEFINE_float('l2', 0.0, 'l2 reg')
