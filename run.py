@@ -76,7 +76,7 @@ def batches(seqs, batch_size, GO_ID, EOS_ID, PAD_ID, shuffle=False, group=False)
         batch_ranges = [(start, start+batch_size) for start in starts]
     else:
         seqs.sort(key=len)
-        max_batch_volume = 1024*25
+        max_batch_volume = batch_size*max(len(seq) for seq in seqs)
         batch_ranges = []
         batch_max_len = 0
         batch_start=0
