@@ -91,7 +91,7 @@ def beam_search(sess, model, encoding, vocab, max_beam_size, max_sent_len=50, re
         output, state = model.decode(sess, zip_input(beam), zip_state(beam))
         beam, candidates = beam_step(beam, candidates, output, state, vocab, max_beam_size, required_len)
         #TODO break after best ray is worse than best completed candidate?
-        if beam[-1][0] < 1.5 * candidates[0][0]:
+        if len(candidates)>0 and beam[-1][0] < 1.5 * candidates[0][0]:
             logging.debug('Best ray is worse than worst completed candidate. candidates[] cannot change after this.')
             break
 
