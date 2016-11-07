@@ -132,7 +132,7 @@ def decode(model_dir, fname):
         saver = tf.train.Saver()
         saver.restore(session, os.path.join(model_dir, 'model.checkpoint'))
         with open(fname, 'r') as fin:
-            with open('%s.out'%fname, 'w') as fout:
+            with open('%s.out'%fname, 'w', 0) as fout:
                 for line in fin:
                     fout.write(translate_sent(session, model, line, vocab) + '\n')
 
