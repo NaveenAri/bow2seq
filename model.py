@@ -35,12 +35,12 @@ class Bow2Seq(object):
 
         bow_vec = bow_module(encoder_input_embeddings, input_mask, config.embedding_size, 1.0, word_dropout, config.bow_layers, avg=config.bow_avg)
         if config.embedding_size == config.hidden_size:
-            rnn_state = bow_vec
+            rnn_initial_state = bow_vec
         else:
             with tf.variable_scope('resize_bow_vec_for_rnn'):
                 W = tf.get_variable("W", [config.embedding_size, config.hidden_size])
-                rnn_state = tf.matmul(bow_vec, W)
-        decoder_initial_state = tuple([rnn_cell.LSTMStateTuple(c=tf.identity(rnn_state), h=tf.identity(rnn_state)) for i in xrange(config.rnn_layers)])
+                rnn_initial_state = tf.matmul(bow_vec, W)
+        decoder_initial_state = tuple([rnn_cell.LSTMStateTuple(c=tf.identity(rnn_initial_state), h=tf.identity(rnn_initial_state)) for i in xrange(config.rnn_layers)])
         logits, decoder_state = decoder_module(decoder_input_embeddings, decoder_initial_state, output_mask,
                                 config.hidden_size, config.vocab_size, config.rnn_layers,
                                 dropout)
@@ -85,6 +85,7 @@ class Bow2Seq(object):
         self.seq_len = seq_len
         self.global_step = global_step
         self.decoder_state = decoder_state
+        self.rnn_initial_state = rnn_initial_state
 
         #beam-search
         # beam_size = tf.placeholder(tf.int32)
