@@ -139,7 +139,8 @@ def decode(model_dir, fname):
         with open(fname, 'r') as fin:
             with open('%s.out'%fname, 'w', 0) as fout:
                 for line in fin:
-                    fout.write(translate_sent(session, model, line, vocab) + '\n')
+                    output_sent = .encode('latin-1')
+                    fout.write((translate_sent(session, model, line, vocab) + '\n').encode('latin-1'))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
