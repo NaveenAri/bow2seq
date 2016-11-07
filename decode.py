@@ -65,7 +65,7 @@ def beam_step(beam, candidates, decoder_output, zipped_state, vocab, max_beam_si
             if len(newbeam) > max_beam_size and newprob < newbeam[0][0]:
                 continue
 
-            if v == vocab[EOS]:
+            if v == vocab.EOS_INDEX:
                 candidates += [newray]
                 candidates.sort(key=lambda r: r[0])
                 candidates = candidates[-max_beam_size:]
@@ -82,7 +82,7 @@ def beam_step(beam, candidates, decoder_output, zipped_state, vocab, max_beam_si
 def beam_search(sess, model, encoding, vocab, max_beam_size, max_sent_len=50):
     state, output = None, None
     initial_state = np.tile(encoding, model.config.rnn_layers*2)
-    beam = [(0.0, initial_state, [vocab[GO]], [''])] # (cumulative log prob, decoder state, [tokens seq], ['list', 'of', 'words'])
+    beam = [(0.0, initial_state, [vocab.GO_INDEX], [''])] # (cumulative log prob, decoder state, [tokens seq], ['list', 'of', 'words'])
 
     candidates = []
     for i in xrange(max_sent_len):#limit max decoder output length
