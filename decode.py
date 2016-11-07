@@ -1,11 +1,13 @@
 import sys
 import os
 import joblib
+import argparse
+import logging
 import numpy as np
 import tensorflow as tf
 from vocab import Vocab
 from model import Bow2Seq
-from run import GO, EOS
+
 # def decode_greedy(model, sess, encoder_output):
 #     decoder_state = None
 #     decoder_input = np.array([data_utils.GO_ID, ], dtype=np.int32).reshape([1, 1])
@@ -27,7 +29,7 @@ from run import GO, EOS
 def print_beam(beam, string='Beam'):
     print(string, len(beam))
     for (i, ray) in enumerate(beam):
-        print(i, ray[0], ' '.join(ray[3]))
+        logging.debug(i, ray[0], ' '.join(ray[3]))
 
 
 def zip_input(beam):
@@ -72,7 +74,7 @@ def beam_step(beam, candidates, decoder_output, zipped_state, vocab, max_beam_si
                 newbeam.sort(key=lambda r: r[0])
                 newbeam = newbeam[-max_beam_size:]
 
-    print('Candidates: %f - %f' % (candidates[0][0], candidates[-1][0]))
+    logging.debug('Candidates: %f - %f' % (candidates[0][0], candidates[-1][0]))
     print_beam(newbeam)
     return newbeam, candidates
 
@@ -80,7 +82,6 @@ def beam_step(beam, candidates, decoder_output, zipped_state, vocab, max_beam_si
 def beam_search(sess, model, encoding, vocab, max_beam_size, max_sent_len=50):
     state, output = None, None
     initial_state = np.tile(encoding, model.config.rnn_layers*2)
-    print initial_state.shape
     beam = [(0.0, initial_state, [vocab[GO]], [''])] # (cumulative log prob, decoder state, [tokens seq], ['list', 'of', 'words'])
 
     candidates = []
@@ -89,24 +90,24 @@ def beam_search(sess, model, encoding, vocab, max_beam_size, max_sent_len=50):
         beam, candidates = beam_step(beam, candidates, output, state, vocab, max_beam_size)
         #TODO break after best ray is worse than best completed candidate?
         if beam[-1][0] < 1.5 * candidates[0][0]:
-            print 'Best ray is worse than worst completed candidate. candidates[] cannot change after this.'
+            logging.debug('Best ray is worse than worst completed candidate. candidates[] cannot change after this.')
             break
 
-    print_beam(candidates, 'Candidates')
+    print_beam(candidates, 'Final Candidates')
     finalray = candidates[-1]
     return finalray[3]
     #return finalray[2]
 
 
 def translate_sent(sess, model, sentence, vocab):
-    print '\n' + '*'*100 + '\n'
+    logging.debug('\n' + '*'*100 + '\n')
     sentence = sentence.lower().strip()
-    print 'input sent: %s'%sentence
+    logging.debug('input sent: %s'%sentence)
     #tokenize
     seq = vocab.words2indices(sentence.split())
     mask = np.ones_like(seq)
-    print 'seq', seq
-    print 'mask', mask
+    logging.debug('seq', seq)
+    logging.debug('mask', mask)
     # Encode
     feed = {
         model.encoder_input: [seq],
@@ -118,7 +119,7 @@ def translate_sent(sess, model, sentence, vocab):
     # Decode
     pred_words = beam_search(sess, model, encoding, vocab, max_beam_size=8)
     pred_sentence = ' '.join(pred_words)
-    print 'predicted sent: %s'%pred_sentence
+    logging.debug('predicted sent: %s'%pred_sentence)
     # Return
     return pred_sentence
 
@@ -136,4 +137,16 @@ def decode(model_dir, fname):
                     fout.write(translate_sent(session, model, line, vocab) + '\n')
 
 if __name__ == "__main__":
-    decode(sys.argv[1], sys.argv[2])
+    parser = argparse.ArgumentParser(
+        description='Run beam search decoder given model checkpoint and input file'
+    )
+    parser.add_argument("model_dir")
+    parser.add_argument("input")
+    parser.add_argument("-v", "--verbose", help="increase output verbosity",
+                        action="store_true")
+
+    args = parser.parse_args()
+    if args.verbose:
+        logging.basicConfig(level=logging.DEBUG)
+
+    decode(args.model_dir, args.input)
