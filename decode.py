@@ -65,11 +65,11 @@ def beam_step(beam, candidates, decoder_output, zipped_state, vocab, max_beam_si
             if len(newbeam) > max_beam_size and newprob < newbeam[0][0]:
                 continue
 
-            if not args.require_eos or v == vocab.EOS_INDEX and (not required_len or len(seq)==required_len):
+            if (not args.require_eos or v == vocab.EOS_INDEX) and (not required_len or len(seq)==required_len):
                 candidates += [newray]
                 candidates.sort(key=lambda r: r[0])
                 candidates = candidates[-max_beam_size:]
-            else:
+            if v != vocab.EOS_INDEX:
                 newbeam += [newray]
                 newbeam.sort(key=lambda r: r[0])
                 newbeam = newbeam[-max_beam_size:]
