@@ -106,8 +106,8 @@ def translate_sent(sess, model, sentence, vocab):
     #tokenize
     seq = vocab.words2indices(sentence.split())
     mask = np.ones_like(seq)
-    logging.debug('seq', seq)
-    logging.debug('mask', mask)
+    logging.debug('seq %r'%seq)
+    logging.debug('mask %r'%mask)
     # Encode
     feed = {
         model.encoder_input: [seq],
