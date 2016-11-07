@@ -29,7 +29,7 @@ from model import Bow2Seq
 def print_beam(beam, string='Beam'):
     print(string, len(beam))
     for (i, ray) in enumerate(beam):
-        logging.debug(i, ray[0], ' '.join(ray[3]))
+        logging.debug(str(i, ray[0], ' '.join(ray[3])))
 
 
 def zip_input(beam):
