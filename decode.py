@@ -46,7 +46,7 @@ def log_rebase(val):
     return np.log(10.0) * val
 
 
-def beam_step(beam, candidates, decoder_output, zipped_state, vocab, max_beam_size):
+def beam_step(beam, candidates, decoder_output, zipped_state, vocab, max_beam_size, required_len=None):
     logprobs = (decoder_output).squeeze(axis=1) # squueze out time-axis to get [batch_size x vocab_size]
     newbeam = []
 
@@ -65,7 +65,7 @@ def beam_step(beam, candidates, decoder_output, zipped_state, vocab, max_beam_si
             if len(newbeam) > max_beam_size and newprob < newbeam[0][0]:
                 continue
 
-            if v == vocab.EOS_INDEX:
+            if not args.require_eos or v == vocab.EOS_INDEX and (not required_len or len(seq)==required_len):
                 candidates += [newray]
                 candidates.sort(key=lambda r: r[0])
                 candidates = candidates[-max_beam_size:]
@@ -79,13 +79,13 @@ def beam_step(beam, candidates, decoder_output, zipped_state, vocab, max_beam_si
     return newbeam, candidates
 
 
-def beam_search(sess, model, encoding, vocab, max_beam_size, max_sent_len=50):
+def beam_search(sess, model, encoding, vocab, max_beam_size, max_sent_len=50, required_len=None):
     state, output = None, None
     initial_state = np.tile(encoding, model.config.rnn_layers*2)
     beam = [(0.0, initial_state, [vocab.GO_INDEX], [''])] # (cumulative log prob, decoder state, [tokens seq], ['list', 'of', 'words'])
 
     candidates = []
-    for i in xrange(max_sent_len):#limit max decoder output length
+    for i in xrange(max(max_sent_len, required_len)):#limit max decoder output length
         output, state = model.decode(sess, zip_input(beam), zip_state(beam))
         beam, candidates = beam_step(beam, candidates, output, state, vocab, max_beam_size)
         #TODO break after best ray is worse than best completed candidate?
@@ -117,7 +117,10 @@ def translate_sent(sess, model, sentence, vocab):
     encoding = sess.run(model.rnn_initial_state, feed)
     encoding = encoding[0]#batch size = 1
     # Decode
-    pred_words = beam_search(sess, model, encoding, vocab, max_beam_size=8)
+    if args.matchlen:
+        pred_words = beam_search(sess, model, encoding, vocab, max_beam_size=8, required_len=len(seq))
+    else:
+        pred_words = beam_search(sess, model, encoding, vocab, max_beam_size=8)
     pred_sentence = ' '.join(pred_words)
     logging.debug('predicted sent: %s'%pred_sentence)
     # Return
@@ -142,6 +145,10 @@ if __name__ == "__main__":
     )
     parser.add_argument("model_dir")
     parser.add_argument("input")
+    parser.add_argument("--matchlen", help="force decode sentence of same length as input",
+                        action="store_true")
+    parser.add_argument("--require_eos", help="only consider complete sentences",
+                        action="store_true")
     parser.add_argument("-v", "--verbose", help="increase output verbosity",
                         action="store_true")
 
