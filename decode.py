@@ -65,7 +65,7 @@ def beam_step(beam, candidates, decoder_output, zipped_state, vocab, max_beam_si
             if len(newbeam) > max_beam_size and newprob < newbeam[0][0]:
                 continue
 
-            if (not args.require_eos or v == vocab.EOS_INDEX) and (not required_len or len(seq)==required_len):
+            if (args.partial_sent or v == vocab.EOS_INDEX) and (not required_len or len(seq)==required_len):
                 candidates += [newray]
                 candidates.sort(key=lambda r: r[0])
                 candidates = candidates[-max_beam_size:]
@@ -87,7 +87,7 @@ def beam_search(sess, model, encoding, vocab, max_beam_size, max_sent_len=50, re
     candidates = []
     for i in xrange(max(max_sent_len, required_len)):#limit max decoder output length
         output, state = model.decode(sess, zip_input(beam), zip_state(beam))
-        beam, candidates = beam_step(beam, candidates, output, state, vocab, max_beam_size)
+        beam, candidates = beam_step(beam, candidates, output, state, vocab, max_beam_size, required_len)
         #TODO break after best ray is worse than best completed candidate?
         if beam[-1][0] < 1.5 * candidates[0][0]:
             logging.debug('Best ray is worse than worst completed candidate. candidates[] cannot change after this.')
@@ -147,10 +147,11 @@ if __name__ == "__main__":
     parser.add_argument("input")
     parser.add_argument("--matchlen", help="force decode sentence of same length as input",
                         action="store_true")
-    parser.add_argument("--require_eos", help="only consider complete sentences",
+    parser.add_argument("--partial_sent", help="only consider complete sentences",
                         action="store_true")
     parser.add_argument("-v", "--verbose", help="increase output verbosity",
                         action="store_true")
+
 
     args = parser.parse_args()
     if args.verbose:
