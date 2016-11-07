@@ -73,8 +73,10 @@ def beam_step(beam, candidates, decoder_output, zipped_state, vocab, max_beam_si
                 newbeam += [newray]
                 newbeam.sort(key=lambda r: r[0])
                 newbeam = newbeam[-max_beam_size:]
-
-    logging.debug('Candidates: %f - %f' % (candidates[0][0], candidates[-1][0]))
+    if len(candidates)>0:
+        logging.debug('Candidates: %f - %f' % (candidates[0][0], candidates[-1][0]))
+    else:
+        logging.debug('Candidates: None')
     print_beam(newbeam)
     return newbeam, candidates
 
